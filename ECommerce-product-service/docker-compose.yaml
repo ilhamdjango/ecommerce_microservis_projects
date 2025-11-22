@@ -1,0 +1,48 @@
+networks:
+  ecommerce_net:
+    driver: bridge
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ecommerce-db
+    environment:
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  product:
+    build: ./ECommerce-product-service
+    container_name: ecommerce-product
+    env_file:
+      - ./ECommerce-product-service/.env
+    depends_on:
+      - db
+    networks:
+      - ecommerce_net
+
+  order:
+    build: ./order-service
+    container_name: ecommerce-order
+    env_file:
+      - ./order-service/.env
+    depends_on:
+      - db
+    networks:
+      - ecommerce_net
+
+  analytic:
+    build: ./analitic-service
+    container_name: ecommerce-analytic
+    env_file:
+      - ./analitic-service/.env
+    depends_on:
+      - db
+    networks:
+      - ecommerce_net
