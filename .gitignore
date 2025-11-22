@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+gateway_env/
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Env files (bütün səviyyələrdə .env-lər)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Docker Compose override local file (repo-ya getməsin deyirsənsə, saxla)
+docker-compose.override.yml

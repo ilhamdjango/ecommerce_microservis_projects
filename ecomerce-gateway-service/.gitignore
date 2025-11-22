@@ -1,0 +1,23 @@
+# Virtual environment
+gateway_env/
+venv/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Uvicorn reload cache
+*.pid

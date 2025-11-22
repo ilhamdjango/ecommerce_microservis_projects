@@ -1,0 +1,200 @@
+name: Microservices CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  analitic:
+    name: Analitic Service CI/CD
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ecommerce_user
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: ecommerce_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ecommerce_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings
+      PYTHONPATH: .
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_HOST: localhost
+      SECRET_KEY: dummy_secret_key_for_tests
+      DEBUG: "True"
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Upgrade pip
+        run: pip install --upgrade pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: ./analitic-service
+
+      - name: Wait for PostgreSQL
+        run: |
+          echo "⏳ Waiting for PostgreSQL to be ready..."
+          for i in {1..10}; do
+            if pg_isready -h localhost -U ecommerce_user; then
+              echo "✅ PostgreSQL is ready!"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run migrations
+        working-directory: ./analitic-service
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings
+        run: python manage.py migrate
+
+      - name: Run Django tests
+        working-directory: ./analitic-service
+        env:
+          PYTHONPATH: .
+          DJANGO_SETTINGS_MODULE: config.settings
+        run: pytest analitic/tests/ -v --disable-warnings --maxfail=1
+
+      - name: Build Docker image
+        run: docker build -t dockerilham117/projects-analitic:latest ./analitic-service
+
+      - name: Docker login
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        if: github.ref == 'refs/heads/main'
+        run: docker push dockerilham117/projects-analitic:latest
+
+    
+  gateway:
+    name: Gateway Service CI/CD
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ecommerce_user
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: ecommerce_db
+        options: >-
+          --health-cmd "pg_isready -U ecommerce_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Upgrade pip
+        run: pip install --upgrade pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: ./ecomerce-gateway-service
+
+      - name: Run tests
+        run: pytest tests/
+        working-directory: ./ecomerce-gateway-service
+
+      - name: Build Docker image
+        run: docker build -t dockerilham117/projects-gateway:latest ./ecomerce-gateway-service
+
+      - name: Docker login
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        if: github.ref == 'refs/heads/main'
+        run: docker push dockerilham117/projects-gateway:latest
+
+
+  order:
+    name: Order Service CI/CD
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ecommerce_user
+          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: ecommerce_db
+        options: >-
+          --health-cmd "pg_isready -U ecommerce_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Upgrade pip
+        run: pip install --upgrade pip
+
+      - name: Install dependencies (Poetry)
+        run: |
+          pip install poetry
+          poetry install
+        working-directory: ./order-service/order_service
+
+      - name: Run tests
+        run: poetry run python manage.py test
+        working-directory: ./order-service/order_service
+
+      - name: Build Docker image
+        run: docker build -t dockerilham117/projects-order:latest ./order-service
+
+      - name: Docker login
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        if: github.ref == 'refs/heads/main'
+        run: docker push dockerilham117/projects-order:latest

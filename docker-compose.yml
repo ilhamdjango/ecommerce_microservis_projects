@@ -1,0 +1,288 @@
+version: "3.9"
+
+networks:
+  ecommerce_net:
+    driver: bridge
+
+volumes:
+  postgres_analytic_data:
+  postgres_order_data:
+  postgres_product_data:
+  postgres_shop_data:
+  postgres_shopcart_data:
+  postgres_user_data:
+  postgres_wishlist_data:
+  redis_data:
+  rabbitmq_data:
+
+services:
+  # -------------------- ANALYTIC --------------------
+  db-analytic:
+    image: postgres:17
+    container_name: ecommerce-analytic-db
+    environment:
+      POSTGRES_DB: analytic_db
+      POSTGRES_USER: analytic_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5439:5432"  # Port dəyişdi
+    volumes:
+      - postgres_analytic_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  analytic:
+    build: ./analitic-service
+    container_name: ecommerce-analytic
+    command: bash -c "./entrypoint.sh"
+    ports:
+      - "8006:8000"
+    depends_on:
+      - db-analytic
+    environment:
+      POSTGRES_HOST: db-analytic
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: analytic_db
+      POSTGRES_USER: analytic_user
+      POSTGRES_PASSWORD: 12345
+      PORT: 8000
+    networks:
+      - ecommerce_net
+
+  # -------------------- ORDER --------------------
+  db-order:
+    image: postgres:17
+    container_name: ecommerce-order-db
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_order_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  order:
+    build: ./order-service
+    container_name: ecommerce-order
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db-order
+    environment:
+      POSTGRES_HOST: db-order
+      POSTGRES_DB: order_db
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - ecommerce_net
+
+  # -------------------- PRODUCT --------------------
+  db-product:
+    image: postgres:17
+    container_name: ecommerce-product-db
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: product_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_product_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  product:
+    build: ./ECommerce-product-service
+    container_name: ecommerce-product
+    ports:
+      - "8002:8000"
+    depends_on:
+      - db-product
+    environment:
+      POSTGRES_HOST: db-product
+      POSTGRES_DB: product_db
+      POSTGRES_USER: product_user
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - ecommerce_net
+
+  # -------------------- SHOP --------------------
+  db-shop:
+    image: postgres:17
+    container_name: ecommerce-shop-db
+    environment:
+      POSTGRES_DB: shop_db
+      POSTGRES_USER: shop_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_shop_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  shop:
+    build: ./ecommerce-shop
+    container_name: ecommerce-shop
+    ports:
+      - "8003:8000"
+    depends_on:
+      - db-shop
+    environment:
+      POSTGRES_HOST: db-shop
+      POSTGRES_DB: shop_db
+      POSTGRES_USER: shop_user
+      POSTGRES_PASSWORD: 12345
+      DJANGO_SETTINGS_MODULE: shop_service.settings
+    networks:
+      - ecommerce_net
+
+  # -------------------- SHOPCART --------------------
+  db-shopcart:
+    image: postgres:17
+    container_name: ecommerce-shopcart-db
+    environment:
+      POSTGRES_DB: shopcart_db
+      POSTGRES_USER: shopcart_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_shopcart_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  shopcart:
+    build: ./ecommerce-shopcart
+    container_name: ecommerce-shopcart
+    ports:
+      - "8004:8000"
+    depends_on:
+      - db-shopcart
+    environment:
+      POSTGRES_HOST: db-shopcart
+      POSTGRES_DB: shopcart_db
+      POSTGRES_USER: shopcart_user
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - ecommerce_net
+
+  # -------------------- USER --------------------
+  db-user:
+    image: postgres:17
+    container_name: ecommerce-user-db
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  user:
+    build: ./Ecommerce-user
+    container_name: ecommerce-user
+    ports:
+      - "8005:8000"
+    depends_on:
+      - db-user
+    environment:
+      POSTGRES_HOST: db-user
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - ecommerce_net
+
+  # -------------------- WISHLIST --------------------
+  db-wishlist:
+    image: postgres:17
+    container_name: ecommerce-wishlist-db
+    environment:
+      POSTGRES_DB: wishlist_db
+      POSTGRES_USER: wishlist_user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_wishlist_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_net
+
+  wishlist:
+    build: ./ecommerce-wishlist
+    container_name: ecommerce-wishlist
+    ports:
+      - "8007:8000"
+    depends_on:
+      - db-wishlist
+    environment:
+      POSTGRES_HOST: db-wishlist
+      POSTGRES_DB: wishlist_db
+      POSTGRES_USER: wishlist_user
+      POSTGRES_PASSWORD: 12345
+    networks:
+      - ecommerce_net
+
+  # -------------------- REDIS --------------------
+  redis:
+    image: redis:7
+    container_name: ecommerce-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecommerce_net
+
+  # -------------------- RABBITMQ --------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ecommerce_net
+
+  # -------------------- GATEWAY --------------------
+  gateway:
+    build: ./ecomerce-gateway-service
+    container_name: ecommerce-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - analytic
+      - order
+      - product
+      - shop
+      - shopcart
+      - user
+      - wishlist
+      - redis
+      - rabbitmq
+    environment:
+      SERVICE_ANALYTIC: http://ecommerce-analytic:8000  # Düzəldildi
+      SERVICE_ORDER: http://ecommerce-order:8000
+      SERVICE_PRODUCT: http://ecommerce-product:8000
+      SERVICE_SHOP: http://ecommerce-shop:8000
+      SERVICE_SHOPCART: http://ecommerce-shopcart:8000
+      SERVICE_USER: http://ecommerce-user:8000
+      SERVICE_WISHLIST: http://ecommerce-wishlist:8000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    networks:
+      - ecommerce_net
